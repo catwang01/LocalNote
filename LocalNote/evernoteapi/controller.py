@@ -33,7 +33,7 @@ class EvernoteController(object):
         notebook.name = noteFullPath
         try:
             notebook = self.noteStore.createNotebook(notebook)
-        except EDAMUserException, e:
+        except EDAMUserException as e:
             if e.errorCode == 10 and e.parameter == 'Notebook.name':
                 self.storage.update(self.token, self.noteStore)
                 return True

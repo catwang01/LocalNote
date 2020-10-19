@@ -1,5 +1,5 @@
 import requests, getpass
-from urllib import unquote
+from urllib.parse import unquote
 
 CONSUMER_KEY = 'littlecodersh1259'
 CONSUMER_SECRET = '39cf81a16bcfb160'
@@ -72,4 +72,4 @@ class Oauth(object):
             int(dict(item.split('=',1) for item in unquote(r.text).split('&'))['edam_expires']) / 1000)
 
 if __name__=='__main__':
-    print Oauth().oauth()
+    print(Oauth().oauth())

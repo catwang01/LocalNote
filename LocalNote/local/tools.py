@@ -1,6 +1,6 @@
 import re
 from lxml import etree
-from StringIO import StringIO
+from io import StringIO
 
 from markdown import markdown as md
 from html2text import html2text as h2t
@@ -24,5 +24,5 @@ def check_dtd(s):
         + s.encode('utf8') + '</en-note>'))
 
 if __name__ == '__main__':
-    print check_dtd('<b><a/></b>')
-    print check_dtd('<code class="Python"></code>')
+    print(check_dtd('<b><a/></b>'))
+    print(check_dtd('<code class="Python"></code>'))

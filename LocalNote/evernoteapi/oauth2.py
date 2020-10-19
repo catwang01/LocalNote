@@ -60,4 +60,4 @@ class Oauth(object):
         return re.compile('<input[^>]*?name="%s"[^>]*?value="(.*?)"'%'accessToken').search(c).groups()[0]
 
 if __name__ == '__main__':
-    print Oauth().oauth()
+    print(Oauth().oauth())
