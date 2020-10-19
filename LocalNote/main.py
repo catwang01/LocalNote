@@ -49,7 +49,6 @@ def show_help(*args):
 
 
 def init(*args):
-
     mainController = Controller()
 
     def clear_root():
@@ -72,6 +71,7 @@ def init(*args):
                     token, expireTime = Oauth(sandbox=sandbox, isInternational=isInternational).oauth()
                     # Use special oauth to get token
                     isSpecialToken = True
+
                 if token:
                     mainController.log_in(token=token, isSpecialToken=isSpecialToken, sandbox=sandbox,
                                           isInternational=isInternational, expireTime=expireTime)

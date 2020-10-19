@@ -1,4 +1,4 @@
-#coding=utf8
+# coding=utf8
 """ A command line tool to use evernote locally
 See:
 https://github.com/littlecodersh/LocalNote
@@ -52,7 +52,7 @@ setup(
     extras_require={},
 
     entry_points={
-        'console_scripts':[
+        'console_scripts': [
             'localnote = LocalNote.main:main'
         ]
     },
