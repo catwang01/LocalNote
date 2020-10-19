@@ -45,7 +45,7 @@ class Oauth(object):
         r = requests.get('https://%s/oauth'%self.host, params = payload)
         return dict(item.split('=',1) for item in unquote(r.text).split('&')).get('oauth_token')
     def __get_login_info(self):
-        account = raw_input('Username: ')
+        account = input('Username: ')
         password = getpass.getpass('Password: ')
         return account, password
     @file_retry(3)

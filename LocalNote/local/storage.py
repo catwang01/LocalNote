@@ -1,6 +1,7 @@
 import json, os, time, sys, re
 from os.path import join, exists
 import chardet
+import shutil
 
 CONFIG_DIR = 'user.cfg'
 
@@ -166,8 +167,4 @@ class Storage(object):
         return True, r
 
 def clear_dir(currentDir):
-    dirs, files = os.walk(currentDir).next()[1:]
-    for d in dirs:
-        clear_dir(os.path.join(currentDir, d))
-        os.rmdir(os.path.join(currentDir, d))
-    for f in files: os.remove(os.path.join(currentDir, f))
+    shutil.rmtree(os.path.abspath(currentDir))

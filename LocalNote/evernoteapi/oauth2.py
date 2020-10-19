@@ -32,7 +32,7 @@ class Oauth(object):
     @retry(3)
     def _login(self, preloadContent):
         data = {
-            'username': raw_input('Username: ').decode(sys.stdin.encoding),
+            'username': input('Username: ').decode(sys.stdin.encoding),
             'password': getpass.getpass(),
             'login': '登陆',
             'showSwitchService': 'true',
