@@ -28,11 +28,11 @@ def check_files_format(fn):
             if wrongFiles and not DEBUG:
                 for fileName, status in wrongFiles:
                     if status == 1:
-                        sys_print('检测到错误放置的内容：' + fileName.decode('utf8'), 'warn')
+                        sys_print('检测到错误放置的内容：' + fileName, 'warn')
                     elif status == 2:
-                        sys_print('检测到内容过大的文件：' + fileName.decode('utf8'), 'warn')
+                        sys_print('检测到内容过大的文件：' + fileName, 'warn')
                     elif status == 3:
-                        sys_print('检测到意义不明的文件：' + fileName.decode('utf8'), 'warn')
+                        sys_print('检测到意义不明的文件：' + fileName, 'warn')
                 sys_print('请确保单条笔记有md或html的正文且不大于%s字节' % mainController.ls.maxUpload)
                 sys_print('请确保没有文件夹格式的附件，或名为.DS_Store的笔记及笔记本。')
             else:
@@ -123,14 +123,14 @@ def pull(mainController, *args):
     mainController.fetch_notes()
     # show changes
     for change in mainController.get_changes():
-        if change[1] in (-1, 0): sys_print('/'.join(change[0]).decode('utf8'), 'pull')
+        if change[1] in (-1, 0): sys_print('/'.join(change[0]), 'pull')
     # confirm
     if sys_input('是否更新本地文件？[yn] ') == 'y':
         r = mainController.download_notes(False)
         if isinstance(r, list):
             sys_print('为存储到本地，请确保笔记名字中没有特殊字符“\\/:*?"<>|”或特殊不可见字符')
             sys_print('为兼容Mac电脑，需要将名字为".DS_Store"的笔记本或笔记更名')
-            for noteFullPath in r: sys_print('/'.join(noteFullPath).decode('utf8'))
+            for noteFullPath in r: sys_print('/'.join(noteFullPath))
     print('Bye~')
 
 
@@ -139,7 +139,7 @@ def push(mainController, *args):
     mainController.fetch_notes()
     # show changes
     for change in mainController.get_changes():
-        if change[1] in (1, 0): sys_print('/'.join(change[0]).decode('utf8'), 'push')
+        if change[1] in (1, 0): sys_print('/'.join(change[0]), 'push')
     # confirm
     if sys_input('是否上传本地文件？[yn] ') == 'y':
         mainController.upload_files(False)
@@ -154,11 +154,11 @@ def status(mainController, *args):
     if changes:
         for change in changes:
             if change[1] == -1:
-                sys_print('/'.join(change[0]).decode('utf8'), 'pull')
+                sys_print('/'.join(change[0]), 'pull')
             elif change[1] == 1:
-                sys_print('/'.join(change[0]).decode('utf8'), 'push')
+                sys_print('/'.join(change[0]), 'push')
             elif change[1] == 0:
-                sys_print('/'.join(change[0]).decode('utf8'), 'both')
+                sys_print('/'.join(change[0]), 'both')
     else:
         sys_print('云端和本地笔记都处于已同步的最新状态。')
 
