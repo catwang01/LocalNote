@@ -1,6 +1,7 @@
 import pytest
 import pexpect
 
+
 class TestCase():
 
     def test_1_init(self):
@@ -8,13 +9,13 @@ class TestCase():
         root_path = "/Users/ed/Git/LocalNote/LocalNote/test/evernote"
         main_path = "/Users/ed/Git/LocalNote/LocalNote/main.py"
         cmd = "cd {} && python {} init".format(root_path, main_path)
-        # child = pexpect.spawn(cmd)
-        # child.expect("是否是沙盒环境？")
-        # child.sendline('y')
-        # child.expect('是否使用开发者Token？')
-        # child.sendline('y')
-        # child.expect('开发者Token:')
-        # child.sendline(token)
+        child = pexpect.spawn(cmd)
+        child.expect("是否是沙盒环境？")
+        child.sendline('y')
+        child.expect('是否使用开发者Token？')
+        child.sendline('y')
+        child.expect('开发者Token:')
+        child.sendline(token)
 
 
 if __name__ == "__main__":

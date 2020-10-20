@@ -1,16 +1,16 @@
 # coding=utf8
 import sys, hashlib, re, time, mimetypes
-
+import os
+sys.path.append(os.path.dirname(__file__))
 import evernote.edam.type.ttypes as Types
 from evernote.edam.notestore import NoteStore
 from evernote.edam.error.ttypes import EDAMUserException
 from evernote.api.client import EvernoteClient
-
 from storage import Storage
 
 
 class EvernoteController(object):
-    def __init__(self, token, isSpecialToken=False, sandbox=False, isInternational=False, notebooks=None):
+    def __init__(self, token, isSpecialToken=False, sandbox=False, isInternational=False, notebooks=["Evernote"]):
         self.token = token
         ischina = not isInternational
         self.client = EvernoteClient(token=self.token, china=ischina, sandbox=sandbox)

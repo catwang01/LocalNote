@@ -118,7 +118,7 @@ def config(mainController, *args):
     sys_print('目前登录用户： ' + mainController.ec.userStore.getUser().username)
 
 
-@check_files_format
+@check_files_format # mainController 在 check_files_format 中初始化
 def pull(mainController, *args):
     mainController.fetch_notes()
     # show changes

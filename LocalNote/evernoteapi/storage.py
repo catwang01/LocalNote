@@ -17,9 +17,14 @@ import evernote.edam.notestore.NoteStore as NoteStore
 # }
 
 class Storage():
+
     storage = {}
 
     def __init__(self, notebooks=None):
+        """
+
+        :param notebooks: None 表示默认所有笔记本
+        """
         self.available = False
         self.notebooks = notebooks
 
@@ -81,9 +86,9 @@ class Storage():
 
     def get_note_dict(self):
         noteDict = {}
-        for nbName, nb in self.storage.iteritems():
+        for nbName, nb in self.storage.items():
             noteDict[nbName] = []
-            for nName, n in nb['notes'].iteritems():
+            for nName, n in nb['notes'].items():
                 noteDict[nbName].append((nName, n.updated / 1000))
         return noteDict
 
@@ -100,5 +105,4 @@ class Storage():
 
 def print_line(s):
     t = sys.getfilesystemencoding()
-    print
-    s.decode('UTF-8').encode(t)
+    print(s)
