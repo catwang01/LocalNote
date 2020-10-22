@@ -22,7 +22,7 @@ def file_retry(n=1):
 class Oauth(object):
     def __init__(self, consumerKey=CONSUMER_KEY, consumerSecret=CONSUMER_SECRET, sandbox=True, isInternational=False):
         if sandbox:
-            self.host = 'sandbox.evernote.com'
+            self.host = 'sandbox.yinxiang.com'
         elif isInternational:
             self.host = 'app.evernote.com'
         else:

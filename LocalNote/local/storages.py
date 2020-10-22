@@ -1,4 +1,8 @@
 import json, os, time, sys, re
+current_dir = os.path.dirname(__file__)
+sys.path.append(current_dir)
+sys.path.append(os.path.dirname(current_dir))
+from notes import SimpleNote, SimpleNotebook
 from os.path import join, exists
 import chardet
 import shutil
@@ -70,11 +74,11 @@ class Storage(object):
     def read_note(self, noteFullPath):
         attachmentDict = {}
         if exists(self.__str_c2l(join(*noteFullPath))):  # note is a foldernote
-            for attachment in os.walk(self.__str_c2l(join(*noteFullPath))).next()[2]:
+            for attachment in next(os.walk(self.__str_c2l(join(*noteFullPath))))[2]:
                 with open(self.__str_c2l(join(*(noteFullPath))) + os.path.sep + attachment, 'rb') as f:
                     attachmentDict[self.__str_l2c(attachment)] = f.read()
         else:  # note is a pure file
-            fileList = os.walk(self.__str_c2l(join(*noteFullPath[:-1]))).next()[2]
+            fileList = next(os.walk(self.__str_c2l(join(*noteFullPath[:-1]))))[2]
             for postfix in ('.md', '.html'):
                 fName = noteFullPath[-1] + postfix
                 if self.__str_c2l(fName) in fileList:
@@ -82,64 +86,104 @@ class Storage(object):
                         attachmentDict[fName] = f.read()
         return attachmentDict
 
-    def write_note(self, noteFullPath, contentDict={}):
-        if 1 < len(noteFullPath):
-            nbName, nName = [self.__str_c2l(s) for s in noteFullPath]
-            # clear environment
-            if exists(nbName):
-                for postfix in ('.md', '.html'):
-                    if exists(join(nbName, nName + postfix)): os.remove(join(nbName, nName + postfix))
-                if exists(join(nbName, nName)):
-                    clear_dir(join(nbName, nName))
-                    os.rmdir(join(nbName, nName))
-            else:
-                os.mkdir(nbName)
-            # download files
-            if not contentDict:
-                pass
-            elif len(contentDict) == 1:
-                for k, v in contentDict.items():
-                    self.write_file(noteFullPath, v, os.path.splitext(k)[1])
-            else:
-                if not exists(join(nbName, nName)): os.mkdir(join(nbName, nName))
-                for k, v in contentDict.items():
-                    self.write_file(noteFullPath + [k], v, '')  # ok, this looks strange, ext is included in k
-        else:
-            if contentDict:  # create folder
-                if not exists(self.__str_c2l(noteFullPath[0])): os.mkdir(self.__str_c2l(noteFullPath[0]))
-            else:  # delete folder
-                noteFullPath = self.__str_c2l(noteFullPath[0])
-                if exists(noteFullPath):
-                    clear_dir(noteFullPath)
-                    os.rmdir(noteFullPath)
+    # def write_note(self, noteFullPath, contentDict={}):
+    #     if 1 < len(noteFullPath):
+    #         nbName, nName = [self.__str_c2l(s) for s in noteFullPath]
+    #         # clear environment
+    #         if exists(nbName):
+    #             for postfix in ('.md', '.html'):
+    #                 if exists(join(nbName, nName + postfix)): os.remove(join(nbName, nName + postfix))
+    #             if exists(join(nbName, nName)):
+    #                 clear_dir(join(nbName, nName))
+    #                 os.rmdir(join(nbName, nName))
+    #         else:
+    #             os.mkdir(nbName)
+    #         # download files
+    #         if not contentDict:
+    #             pass
+    #         elif len(contentDict) == 1:
+    #             for k, v in contentDict.items():
+    #                 self.write_file(noteFullPath, v, os.path.splitext(k)[1])
+    #         else:
+    #             if not exists(join(nbName, nName)): os.mkdir(join(nbName, nName))
+    #             for k, v in contentDict.items():
+    #                 self.write_file(noteFullPath + [k], v, '')  # ok, this looks strange, ext is included in k
+    #     else:
+    #         if contentDict:  # create folder
+    #             if not exists(self.__str_c2l(noteFullPath[0])): os.mkdir(self.__str_c2l(noteFullPath[0]))
+    #         else:  # delete folder
+    #             noteFullPath = self.__str_c2l(noteFullPath[0])
+    #             if exists(noteFullPath):
+    #                 clear_dir(noteFullPath)
+    #                 os.rmdir(noteFullPath)
 
-    def write_file(self, noteFullPath, content, postfix='.md'):
-        if len(noteFullPath) < 1: return False
-        if not exists(self.__str_c2l(noteFullPath[0])):
-            os.mkdir(self.__str_c2l(noteFullPath[0]))
-        try:
-            noteFullPath[1] += postfix
-            with open(self.__str_c2l(join(*noteFullPath)), 'wb') as f:
-                f.write(content)
-            return True
-        except:
-            return False
+    def write_note(self, noteFullPath, content):
+        notebookName, noteName = noteFullPath
+        if not os.path.exists(notebookName):
+            os.mkdir(notebookName)
+        with open(os.path.join(notebookName, noteName + ".md"), "w") as f:
+            f.write(content)
+    # else:
+        #     if contentDict:  # create folder
+        #         if not exists(self.__str_c2l(noteFullPath[0])): os.mkdir(self.__str_c2l(noteFullPath[0]))
+        #     else:  # delete folder
+        #         noteFullPath = self.__str_c2l(noteFullPath[0])
+        #         if exists(noteFullPath):
+        #             clear_dir(noteFullPath)
+        #             os.rmdir(noteFullPath)
+
+    # def write_file(self, noteFullPath, content, postfix='.md'):
+    #     if len(noteFullPath) < 1: return False
+    #     if not exists(self.__str_c2l(noteFullPath[0])):
+    #         os.mkdir(self.__str_c2l(noteFullPath[0]))
+    #     try:
+    #         noteFullPath[1] += postfix
+    #         with open(self.__str_c2l(join(*noteFullPath)), 'wb') as f:
+    #             f.write(content)
+    #         return True
+    #     except:
+    #         return False
+
+    # def get_file_dict(self, notebooksList=None):
+    #     """
+    #
+    #     :param notebooksList:
+    #     :return: {'Test': [('Pytorch onnx copy', 1603186460.9791174), ('Leetcode 58. 最后一个单词的长度 copy', 1603186460.9058812)]}
+    #     """
+    #     fileDict = {}
+    #     for nbName in next(os.walk('.'))[1]:  # get folders
+    #         nbNameUtf8 = self.__str_l2c(nbName)
+    #         if notebooksList is not None and nbNameUtf8 not in notebooksList: continue
+    #         if nbNameUtf8 == '.DS_Store': continue  # Mac .DS_Store ignorance
+    #         fileDict[nbNameUtf8] = []
+    #         for nName in reduce(lambda x, y: x + y, next(os.walk(nbName))[1:]):  # get folders and files
+    #             if nName == '.DS_Store': continue  # Mac .DS_Store ignorance
+    #             filePath = join(nbName, nName)
+    #             if os.path.isdir(filePath):
+    #                 fileDict[nbNameUtf8].append((self.__str_l2c(nName), os.stat(filePath).st_mtime))
+    #             else:
+    #                 fileDict[nbNameUtf8].append(
+    #                     (self.__str_l2c(os.path.splitext(nName)[0]), os.stat(filePath).st_mtime))
+    #     return fileDict
 
     def get_file_dict(self, notebooksList=None):
+        """
+
+        :param notebooksList:
+        :return: {'Test': [('Pytorch onnx copy', 1603186460.9791174), ('Leetcode 58. 最后一个单词的长度 copy', 1603186460.9058812)]}
+        """
+
         fileDict = {}
-        for nbName in next(os.walk('.'))[1]:  # get folders
-            nbNameUtf8 = self.__str_l2c(nbName)
-            if notebooksList is not None and nbNameUtf8 not in notebooksList: continue
-            if nbNameUtf8 == '.DS_Store': continue  # Mac .DS_Store ignorance
-            fileDict[nbNameUtf8] = []
-            for nName in reduce(lambda x, y: x + y, next(os.walk(nbName))[1:]):  # get folders and files
-                if nName == '.DS_Store': continue  # Mac .DS_Store ignorance
-                filePath = join(nbName, nName)
-                if os.path.isdir(filePath):
-                    fileDict[nbNameUtf8].append((self.__str_l2c(nName), os.stat(filePath).st_mtime))
-                else:
-                    fileDict[nbNameUtf8].append(
-                        (self.__str_l2c(os.path.splitext(nName)[0]), os.stat(filePath).st_mtime))
+        for notebookName in next(os.walk('.'))[1]:  # get folders
+            if notebooksList is not None and notebookName not in notebooksList: continue
+            if notebookName == '.DS_Store': continue  # Mac .DS_Store ignorance
+            fileDict[notebookName] = SimpleNotebook(created=os.path.getctime(notebookName), updated=os.path.getmtime(notebookName))
+            notes = {}
+            for noteName in os.listdir(notebookName):
+                if noteName == '.DS_Store': continue  # Mac .DS_Store ignorance
+                filePath = os.path.join(notebookName, noteName)
+                notes[os.path.splitext(noteName)[0]] = SimpleNote(created=os.path.getctime(filePath), updated=os.path.getmtime(filePath))
+            fileDict[notebookName].notes = notes
         return fileDict
 
     def check_files_format(self):

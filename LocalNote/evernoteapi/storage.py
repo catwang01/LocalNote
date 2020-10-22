@@ -1,8 +1,12 @@
 # coding=utf8
 import sys
+import os
+current_dir = os.path.dirname(__file__)
+sys.path.append(current_dir)
+sys.path.append(os.path.dirname(current_dir))
 import evernote.edam.type.ttypes as Types
 import evernote.edam.notestore.NoteStore as NoteStore
-
+from notes import SimpleNote, SimpleNotebook
 
 # Data Structure
 # notebookName:{
@@ -15,6 +19,7 @@ import evernote.edam.notestore.NoteStore as NoteStore
 # noteDictFormat: {
 # 'notebookName':[('note1', timeStamp), ..],
 # }
+
 
 class Storage():
 
@@ -79,17 +84,47 @@ class Storage():
         return True
 
     def get(self, l):
+        """
+        get notebook object or note object
+        """
         r = self.storage.get(l[0])
         if r is None: return
         if 1 < len(l): return r['notes'].get(l[1])
         return r.get('notebook')
 
+    # def get_note(self, noteFullPath):
+    #     """
+    #
+    #     :param l:  ['Vim', 'Vscode C++']
+    #
+    #     :return:
+    #     """
+    #     notebookName, noteName = noteFullPath
+    #     return self.storage.get(notebookName).get(noteName)
+    #     r = self.storage.get(l[0])
+    #     if r is None: return
+    #     if 1 < len(l): return r['notes'].get(l[1])
+    #     return r.get('notebook')
+
     def get_note_dict(self):
+        """
+        :return: noteDict like {'Vim': [('Vscode C++ 一键编译运行', 1602513834.0), ('vim如何添加加注册表', 1549720524.0)]}
+        {'Test3': {'updated': 1603275896.0, 'notes': {}},
+         'Test2': {'updated': 1603275893.0,
+          'notes': {'Leetcode 58. 最后一个单词的长度 copy': 1603277433.0,
+           'Pytorch onnx copy': 1603277411.0,
+           'haha copy': 1603277355.0,
+           'hehe': 1603277253.0,
+           'haha': 1603201258.0}},
+         'Test1': {'updated': 1603275871.0, 'notes': {}}}
+        """
         noteDict = {}
-        for nbName, nb in self.storage.items():
-            noteDict[nbName] = []
-            for nName, n in nb['notes'].items():
-                noteDict[nbName].append((nName, n.updated / 1000))
+        for notebookName, nb in self.storage.items():
+            noteDict[notebookName] = SimpleNotebook(created=nb['notebook'].serviceCreated / 1000, updated=nb['notebook'].serviceUpdated / 1000)
+            notes = {}
+            for noteName, note in nb['notes'].items():
+                notes[noteName] = SimpleNote(updated=note.updated / 1000)
+            noteDict[notebookName].notes = notes
         return noteDict
 
     def show_notebook(self):

@@ -1,5 +1,7 @@
 # coding=utf8
+from urllib.parse import unquote
 import sys, hashlib, re, time, mimetypes
+from lxml import etree
 import os
 sys.path.append(os.path.dirname(__file__))
 import evernote.edam.type.ttypes as Types
@@ -7,10 +9,11 @@ from evernote.edam.notestore import NoteStore
 from evernote.edam.error.ttypes import EDAMUserException
 from evernote.api.client import EvernoteClient
 from storage import Storage
+from urllib.parse import quote
 
 
 class EvernoteController(object):
-    def __init__(self, token, isSpecialToken=False, sandbox=False, isInternational=False, notebooks=["Evernote"]):
+    def __init__(self, token, isSpecialToken=False, sandbox=False, isInternational=False, notebooks=None):
         self.token = token
         ischina = not isInternational
         self.client = EvernoteClient(token=self.token, china=ischina, sandbox=sandbox)
@@ -41,81 +44,32 @@ class EvernoteController(object):
         self.storage.create_notebook(notebook)
         return True
 
-    def create_note(self, noteFullPath, content='', fileDict={}):
+    def create_note(self, noteFullPath, content=''):
         if self.get(noteFullPath): return False
-        if 1 < len(noteFullPath):
-            notebook = noteFullPath[0]
-            title = noteFullPath[1]
-        else:
-            notebook = self.storage.defaultNotebook
-            title = noteFullPath[0]
-        note = Types.Note()
-        note.title = title
-        note.content = '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">'
-        note.content += '<en-note>'
-        content = re.sub('<en-media.*?/>', '', content)
-        note.content += content
-        if self.get([notebook]) is None: self.create_notebook(notebook)
-        note.notebookGuid = self.get([notebook]).guid
-        if fileDict:
-            note.resources = []
-            for fileName, fileBytes in fileDict.iteritems():
-                fileData = Types.Data()
-                fileData.bodyHash = self._md5(fileBytes)
-                fileData.size = len(fileBytes)
-                fileData.body = fileBytes
-                fileAttr = Types.ResourceAttributes()
-                fileAttr.fileName = fileName
-                fileAttr.attachment = True
-                fileResource = Types.Resource()
-                fileResource.data = fileData
-                fileResource.mime = mimetypes.guess_type(fileName)[0] or 'application/octet-stream'
-                fileResource.attributes = fileAttr
-                note.resources.append(fileResource)
-                note.content += '<en-media type="%s" hash="%s"/>' % (fileResource.mime, fileData.bodyHash)
-        note.content += '</en-note>'
+        notebookName, noteName = noteFullPath
+        note = self._create_note(notebookName, noteName, content)
         note = self.noteStore.createNote(note)
-        self.storage.create_note(note, notebook)
+        self.storage.create_note(note, notebookName)
         return True
 
-    def update_note(self, noteFullPath, content=None, fileDict={}):
-        note = self.get(noteFullPath)
-        if note is None: return self.create_note(noteFullPath, content or '', fileDict)
-        if 1 < len(noteFullPath):
-            notebook = noteFullPath[0]
-            title = noteFullPath[1]
-        else:
-            notebook = self.storage.defaultNotebook
-            title = noteFullPath[0]
-        oldContent = self.get_content(noteFullPath)
-        content = content or oldContent
-        header = '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">'
-        guid = note.guid
-        content = re.sub('<en-media.*?/>', '', content)
+    def _create_note(self, notebookName, noteName, content, otherAttr={}):
         note = Types.Note()
-        note.guid = guid
-        note.title = title
-        note.content = header
-        note.content += '<en-note>'
-        note.content += content
-        if fileDict:
-            note.resources = []
-            for fileName, fileBytes in fileDict.iteritems():
-                fileData = Types.Data()
-                fileData.bodyHash = self._md5(fileBytes)
-                fileData.size = len(fileBytes)
-                fileData.body = fileBytes
-                fileAttr = Types.ResourceAttributes()
-                fileAttr.fileName = fileName
-                fileAttr.attachment = True
-                fileResource = Types.Resource()
-                fileResource.data = fileData
-                fileResource.mime = mimetypes.guess_type(fileName)[0] or 'application/octet-stream'
-                fileResource.attributes = fileAttr
-                note.resources.append(fileResource)
-                note.content += '<en-media type="%s" hash="%s"/>' % (fileResource.mime, fileData.bodyHash)
-        note.content += '</en-note>'
-        self.noteStore.updateNote(self.token, note)
+        note.title = noteName
+        note.content = '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd"><en-note><center>{}</center></en-note>'.format(quote(content))
+        if self.get([notebookName]) is None: self.create_notebook(notebookName)
+        note.attributes = Types.NoteAttributes(contentClass='yinxiang.markdown')
+        note.notebookGuid = self.get([notebookName]).guid
+        for attr, value in otherAttr.items():
+            setattr(note, attr, value)
+        return note
+
+    def update_note(self, noteFullPath, content=None):
+        note = self.get(noteFullPath)
+        if note is None: return self.create_note(noteFullPath, content or '')
+        notebook, title = noteFullPath[0], noteFullPath[1]
+        newnote = self._create_note(notebook, title, content, otherAttr={'guid': note.guid})
+        self.noteStore.updateNote(newnote)
+
         self.storage.delete_note(noteFullPath)
         self.storage.create_note(note, notebook)
         return True
@@ -123,15 +77,13 @@ class EvernoteController(object):
     def get_content(self, noteFullPath):
         note = self.get(noteFullPath)
         if note is None: return
-        r = self.noteStore.getNoteContent(note.guid)
-        try:
-            content = re.compile('[\s\S]*?<en-note[^>]*?>([\s\S]*?)</en-note>').findall(r)[0]
-        except:
-            content = ''
-        return content
+        content = self.noteStore.getNoteContent(note.guid)
+        parsed_content = parse_content(content)
+        return parsed_content
 
     def get_attachment(self, noteFullPath):
-        note = self.get(noteFullPath)
+
+        note = self.get(noteFullPath) # NoteMetadata
         attachmentDict = {}
         for resource in (self.noteStore.getNote(note.guid, False, True, False, False).resources or {}):
             attachmentDict[resource.attributes.fileName] = resource.data.body
@@ -164,6 +116,11 @@ class EvernoteController(object):
         return True
 
     def get(self, s):
+        """
+
+        :param s: ['Vim', 'Vscode C++ 一键编译运行']
+        :return:
+        """
         return self.storage.get(s)
 
     def show_notebook(self):
@@ -177,6 +134,11 @@ class EvernoteController(object):
         m.update(s)
         return m.hexdigest()
 
+def parse_content(text):
+    html = bytes(bytearray(text, encoding='utf-8'))
+    html = etree.HTML(html)
+    centerTag = html.xpath('//center/text()')[0]
+    return unquote(centerTag)
 
 if __name__ == '__main__':
     # You can get this from 'https://%s/api/DeveloperToken.action'%SERVICE_HOST >>

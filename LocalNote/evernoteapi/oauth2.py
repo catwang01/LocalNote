@@ -19,7 +19,7 @@ def retry(n=1):
 class Oauth(object):
     def __init__(self, sandbox=True, isInternational=False):
         if sandbox:
-            self.host = 'https://sandbox.evernote.com'
+            self.host = 'https://sandbox.yinxiang.com'
         elif isInternational:
             self.host = 'https://www.evernote.com'
         else:

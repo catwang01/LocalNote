@@ -2,10 +2,11 @@
 import sys, os, json, time
 
 from controllers import Controller, convert_html
-from evernoteapi.oauth2 import Oauth
+# from oauth2 import Oauth
 from local import clear_dir
 from exception import main_wrapper
 from functools import reduce
+from constant import DOWNLOAD, UPLOAD, CONFLICT
 
 DEBUG = False
 
@@ -67,10 +68,10 @@ def init(*args):
                 isSpecialToken = sys_input('是否使用开发者Token？[yn] ') == 'y'
                 if isSpecialToken:
                     token = sys_input('开发者Token: ')
-                else:
-                    token, expireTime = Oauth(sandbox=sandbox, isInternational=isInternational).oauth()
-                    # Use special oauth to get token
-                    isSpecialToken = True
+                # else:
+                #     token, expireTime = Oauth(sandbox=sandbox, isInternational=isInternational).oauth()
+                #     # Use special oauth to get token
+                #     isSpecialToken = True
 
                 if token:
                     mainController.log_in(token=token, isSpecialToken=isSpecialToken, sandbox=sandbox,
@@ -100,7 +101,7 @@ def notebook(*args):
     notebooks = []
     sys_print('请输入使用的笔记本名字，留空结束')
     while 1:
-        nb = sys_input('> ').encode('utf8')
+        nb = sys_input('> ')
         if nb:
             notebooks.append(nb)
         else:
@@ -122,8 +123,22 @@ def config(mainController, *args):
 def pull(mainController, *args):
     mainController.fetch_notes()
     # show changes
-    for change in mainController.get_changes():
-        if change[1] in (-1, 0): sys_print('/'.join(change[0]), 'pull')
+    changeDict = mainController.get_changes()
+
+    # for notebookName in changeDict[UPLOAD]:
+    #     for noteName in changeDict[UPLOAD][notebookName]:
+    #         print("Note: {} is not pushed! Push before pulled!".format(notebookName + "/" + noteName))
+    #         return
+
+    for notebookName in changeDict[CONFLICT]:
+        for noteName in changeDict[CONFLICT][notebookName]:
+            print("Note: {} is both changed remote and locally! Please resolve the conflict!".format(notebookName + "/" + noteName))
+            return
+
+    for notebookName in changeDict[DOWNLOAD]:
+        for noteName in changeDict[DOWNLOAD][notebookName]:
+            sys_print(notebookName + '/' + noteName, 'pull')
+
     # confirm
     if sys_input('是否更新本地文件？[yn] ') == 'y':
         r = mainController.download_notes(False)
