@@ -3,16 +3,15 @@ import sys
 current_dir = os.path.dirname(__file__)
 sys.path.append(current_dir)
 sys.path.append(os.path.dirname(current_dir))
-from notes import SimpleNote, SimpleNotebook
 from collections import defaultdict
 
 import chardet
 from urllib.parse import quote
 
+from .evernotecontroller import EvernoteController
 from local import Storage as LocalStorage
 from local import html2text, markdown
-from evernoteapi.controller import EvernoteController
-from constant import DOWNLOAD, UPLOAD, CONFLICT
+from .constant import DOWNLOAD, UPLOAD, CONFLICT
 
 
 class ObjectStore:

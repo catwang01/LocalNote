@@ -1,5 +1,8 @@
 # coding=utf8
 from urllib.parse import unquote
+from .storage import LocalStorage
+from urllib.parse import quote
+from evernote.api.client import EvernoteClient
 import sys, hashlib, re, time, mimetypes
 from lxml import etree
 import os
@@ -7,9 +10,6 @@ sys.path.append(os.path.dirname(__file__))
 import evernote.edam.type.ttypes as Types
 from evernote.edam.notestore import NoteStore
 from evernote.edam.error.ttypes import EDAMUserException
-from evernote.api.client import EvernoteClient
-from storage import Storage
-from urllib.parse import quote
 
 
 class EvernoteController(object):
@@ -20,7 +20,7 @@ class EvernoteController(object):
         self.isSpecialToken = isSpecialToken
         self.userStore = self.client.get_user_store()
         self.noteStore = self.client.get_note_store()
-        self.storage = Storage(notebooks)
+        self.storage = LocalStorage(notebooks)
 
     def get_upload_limit(self):
         return {

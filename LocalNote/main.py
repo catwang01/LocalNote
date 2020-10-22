@@ -1,15 +1,32 @@
 # coding=utf8
 import sys, os, json, time
 
-from controllers import Controller, convert_html
+from modules.controller import Controller
 # from oauth2 import Oauth
-from local import clear_dir
-from exception import main_wrapper
 from functools import reduce
-from constant import DOWNLOAD, UPLOAD, CONFLICT
+from modules.constant import DOWNLOAD, UPLOAD, CONFLICT
+from utils.utils import clear_dir
 
 DEBUG = False
 
+
+# coding=utf8
+import sys
+
+from evernote.edam.error.ttypes import EDAMSystemException
+
+
+def main_wrapper(fn):
+    def _main_wrapper(*args, **kwargs):
+        try:
+            fn(*args, **kwargs)
+        except EDAMSystemException as e:
+            if e.errorCode == 19:
+                print(u'[INFO] 已达到本小时调用次数显示，再次调用会显示未登录，请等待一小时。')
+            else:
+                raise e
+
+    return _main_wrapper
 
 def sys_print(s, level='info'):
     print(('[%-4s] %s' % ((level + ' ' * 4)[:4].upper(), s)))
@@ -17,7 +34,6 @@ def sys_print(s, level='info'):
 
 def sys_input(s):
     return input(s)
-
 
 def check_files_format(fn):
     def _check_files_format(*args, **kwargs):
