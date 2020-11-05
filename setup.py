@@ -23,37 +23,17 @@ setup(
     long_description=long_description,
 
     url='https://github.com/littlecodersh/LocalNote',
-
-    author='LittleCoder',
-    author_email='i7meavnktqegm1b@qq.com',
-
-    license='MIT',
-
-    classifiers=[
-        'Development Status :: 3 - Alpha',
-
-        'Intended Audience :: Developers',
-        'Topic :: Software Development :: Libraries :: Python Modules',
-
-        'License :: OSI Approved :: MIT License',
-
-        'Programming Language :: Python :: 2.7',
-    ],
-
     keywords='evernote local markdown python',
 
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
-    packages=find_packages(),
+    packages=["LocalNote"],
 
-    install_requires=['requests', 'markdown', 'chardet', 'html2text', 'lxml'],
-
-    # List additional groups of dependencies here
-    extras_require={},
+    install_requires=['evernote3', 'oauth2'],
 
     entry_points={
         'console_scripts': [
-            'localnote = LocalNote.main:main'
+            'localnote=LocalNote.localnote:main'
         ]
     },
 )
