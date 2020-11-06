@@ -15,6 +15,9 @@ def execute_cmd(cmd, **kwargs):
     completed_process = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, **kwargs)
     return completed_process.stdout.decode().strip()
 
+def strip_control_characters(s):
+    return re.sub(r"[\x00-\x08\x0b-\x0c\x0e-\x1F\x7F]", "", s) 
+
 def nbconvert(filename):
     cmd = 'jupyter nbconvert --to markdown --stdout "{}"'.format(filename)
     content = execute_cmd(cmd)
@@ -75,7 +78,6 @@ def main():
     else:
         raise Exception("Unsupported filetype: {}".format(filetype))
 
-    strip_control_characters = lambda s:"".join(i  for i in s if ord(i)!=27)
     content = strip_control_characters(content)
     logging.debug("filename: {} content: {}".format(args.filename, content))
 
@@ -91,6 +93,8 @@ def main():
                 logging.info("Note {} has been udpated! SUCCESS".format(note.title))
             else:
                 logging.info("Skip!")
+        else:
+            logging.info("No similar note called {} was found!".format(title))
     else:
         raise Exception("Unsupported mode: {}".format(args.mode))
 
