@@ -16,9 +16,8 @@ def execute_cmd(cmd, **kwargs):
     return completed_process.stdout.decode().strip()
 
 def nbconvert(filename):
-    cmd = "jupyter nbconvert --to markdown --stdout {}".format(filename)
+    cmd = 'jupyter nbconvert --to markdown --stdout "{}"'.format(filename)
     content = execute_cmd(cmd)
-    logging.debug("filename: {} content: {}".format(filename, content))
     return content
 
 class Client:
@@ -67,18 +66,18 @@ def main():
     args = parser.parse_args()
 
     client = Client()
-    title, filetype = args.filename.split('.')
-    if filetype == 'md':
+    title, filetype = os.path.splitext(args.filename)
+    if filetype == '.md':
         with open(args.filename) as f:
             content = f.read()
-    elif filetype == 'ipynb':
+    elif filetype == '.ipynb':
         content = nbconvert(args.filename)
     else:
         raise Exception("Unsupported filetype: {}".format(filetype))
 
     strip_control_characters = lambda s:"".join(i  for i in s if ord(i)!=27)
     content = strip_control_characters(content)
-    logging.debug("content: {}".format(content))
+    logging.debug("filename: {} content: {}".format(args.filename, content))
 
     if args.mode == 'add':
         client.create_note(title, content)
