@@ -13,7 +13,6 @@ import evernote.edam.notestore.NoteStore as NoteStore
 
 CONFIG_DIR = 'user.cfg'
 
-
 # fileDictFormat: {
 # 'notebookName':[('note1', timeStamp), ..],
 # }
@@ -287,6 +286,7 @@ class LocalStorage(object):
 
         fileDict = {}
         for notebookName in next(os.walk('.'))[1]:  # get folders
+            if notebookName == '.objects': continue
             if notebooksList is not None and notebookName not in notebooksList: continue
             if notebookName == '.DS_Store': continue  # Mac .DS_Store ignorance
             fileDict[notebookName] = SimpleNotebook(created=os.path.getctime(notebookName), updated=os.path.getmtime(notebookName))
@@ -311,6 +311,7 @@ class LocalStorage(object):
             return False, []
         r = []  # (filename, status) 1 for wrong placement, 2 for too large, 3 for missing main file
         notebooks, notes = next(os.walk('.'))[1:]
+        notebooks.remove(".objects")
         for note in notes:
             if note not in ('user.cfg', '.DS_Store'): r.append((self.__str_l2c(note), 1))
         for notebook in notebooks:

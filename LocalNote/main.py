@@ -169,11 +169,15 @@ def pull(mainController, *args):
 def push(mainController, *args):
     mainController.fetch_notes()
     # show changes
-    for change in mainController.get_changes():
-        if change[1] in (1, 0): sys_print('/'.join(change[0]), 'push')
+    changeDict = mainController.get_changes()
+    for notebookName in changeDict[UPLOAD]:
+        for noteName in changeDict[UPLOAD][notebookName]:
+            sys_print('/'.join([notebookName, noteName]), 'push')
     # confirm
     if sys_input('是否上传本地文件？[yn] ') == 'y':
         mainController.upload_files(False)
+    else:
+        sys_print("Nothing Changed")
     print('Bye~')
 
 

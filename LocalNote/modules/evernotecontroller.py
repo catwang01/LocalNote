@@ -1,6 +1,6 @@
 # coding=utf8
 from urllib.parse import unquote
-from .storage import LocalStorage
+from .storage import RemoteStorage
 from urllib.parse import quote
 from evernote.api.client import EvernoteClient
 import sys, hashlib, re, time, mimetypes
@@ -20,7 +20,7 @@ class EvernoteController(object):
         self.isSpecialToken = isSpecialToken
         self.userStore = self.client.get_user_store()
         self.noteStore = self.client.get_note_store()
-        self.storage = LocalStorage(notebooks)
+        self.storage = RemoteStorage(notebooks)
 
     def get_upload_limit(self):
         return {

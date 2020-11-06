@@ -1,6 +1,6 @@
-#!/anaconda3/bin/python
 import os
 import urllib
+import html
 import re
 import evernote.edam.type.ttypes as Types
 from evernote.edam.notestore import NoteStore
@@ -9,7 +9,7 @@ import subprocess
 import argparse   
 import logging
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - line:%(lineno)d - %(message)s")
+logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - line:%(lineno)d - %(message)s")
 
 def execute_cmd(cmd, **kwargs):
     completed_process = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, **kwargs)
@@ -33,9 +33,9 @@ class Client:
         newnote = Types.Note()
         newnote.title = title
         newnote.content = '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">'
-        newnote.content += '<en-note><div>{}</div><center>{}</center></en-note>'.format("", quoted_content)
+        newnote.content += '<en-note><div>{}</div><center>{}</center></en-note>'.format(html.escape(content), quoted_content)
         newnote.attributes = Types.NoteAttributes(contentClass='yinxiang.markdown')
-        self.notestore.createNote(newnote)
+        newnote = self.notestore.createNote(newnote)
         logging.debug("newnote's title: {} newnote's guid: {}".format(newnote.title, newnote.guid))
 
 
@@ -53,35 +53,47 @@ class Client:
         newnote = Types.Note()
         newnote.title = title
         newnote.content = '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">'
-        newnote.content += '<en-note><div>{}</div><center>{}</center></en-note>'.format("", quoted_content)
+        newnote.content += '<en-note><div>{}</div><center>{}</center></en-note>'.format(html.escape(content), quoted_content)
         newnote.guid = note.guid
-        self.notestore.updateNote(newnote)
+        newnote = self.notestore.updateNote(newnote)
         logging.debug("updated note's title: {} updated note's guid: {}".format(newnote.title, newnote.guid))
 
         
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("mode", type=str)
+    parser.add_argument("filename", type=str)
 
-parser = argparse.ArgumentParser()
-parser.add_argument("mode", type=str)
-parser.add_argument("filename", type=str)
+    args = parser.parse_args()
 
-args = parser.parse_args()
-args.mode == 'add':
-
-client = Client()
-title, filetype = args.filename.split('.')
-
-strip_control_characters = lambda s:"".join(i  for i in s if ord(i)!=27)
-content = strip_control_characters(content)
-logging.debug("content: {}".format(content))
-note = client.find_by_title(title)
-if note:
-    answer = input("Do you want to update note: {}? [y/n]".format(node.title))
-    if answer == 'y':
-        client.update_note(note, title, content)
-        logging.info("Note {} has been udpated! SUCCESS".format(note.title))
+    client = Client()
+    title, filetype = args.filename.split('.')
+    if filetype == 'md':
+        with open(args.filename) as f:
+            content = f.read()
+    elif filetype == 'ipynb':
+        content = nbconvert(args.filename)
     else:
-        logging.info("Skip!")
-else:
-    client.create_note(title, content)
-    logging.info("create note: {} SUCCESS!".format(title))
+        raise Exception("Unsupported filetype: {}".format(filetype))
 
+    strip_control_characters = lambda s:"".join(i  for i in s if ord(i)!=27)
+    content = strip_control_characters(content)
+    logging.debug("content: {}".format(content))
+
+    if args.mode == 'add':
+        client.create_note(title, content)
+        logging.info("create note: {} SUCCESS!".format(title))
+    elif args.mode == 'update':
+        note = client.find_by_title(title)
+        if note:
+            answer = input("Do you want to update note: {}? [y/n]".format(node.title))
+            if answer == 'y':
+                client.update_note(note, title, content)
+                logging.info("Note {} has been udpated! SUCCESS".format(note.title))
+            else:
+                logging.info("Skip!")
+    else:
+        raise Exception("Unsupported mode: {}".format(args.mode))
+
+if __name__ == "__main__":
+    main()

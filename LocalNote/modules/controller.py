@@ -9,7 +9,7 @@ import chardet
 from urllib.parse import quote
 
 from .evernotecontroller import EvernoteController
-from local import Storage as LocalStorage
+from .storage import LocalStorage
 from local import html2text, markdown
 from .constant import DOWNLOAD, UPLOAD, CONFLICT
 
@@ -20,9 +20,7 @@ class ObjectStore:
         self.create_store()
 
     def create_store(self):
-        if os.path.exists(self.store_path):
-            raise Exception("ObjectStore {} exists".format(self.store_path))
-        else:
+        if not os.path.exists(self.store_path):
             os.mkdir(self.store_path)
 
     def add_object(self, guid):
@@ -128,7 +126,7 @@ class Controller(object):
             remotenoteset = set(remotenotebook.notes.keys())
 
             for noteName in localnoteset - remotenoteset:
-                if self.ls.lastUpdate < localnotebook[noteName].updated:  # local is updated
+                if self.ls.lastUpdate < localnotebook.notes[noteName].updated:  # local is updated
                     if notebookName not in changeDict[CONFLICT]:
                         changeDict[CONFLICT][notebookName] = []
                     changeDict[CONFLICT][notebookName].append(noteName)  # because we don't know remote is udpated nor not
@@ -206,40 +204,31 @@ class Controller(object):
     def upload_files(self, update=True):
         if not self.available: return False
 
-        def _upload_files(noteFullPath):
-            filepath = os.path.join(*noteFullPath)
-            print('Uploading ', filepath)
-            nbName, nName = noteFullPath
-            with open(filepath + ".md") as f:
-                txt = f.read()
-            self.ec.update_note(noteFullPath, txt)
 
         localNoteDict = self.ls.get_file_dict()
         remoteNoteDict = self.es.get_note_dict()
 
         changesDict = self.__get_changes(update)
-        for notebookName in changesDict:
-            for noteName, status in changesDict[notebookName].items():
-                if status == UPLOAD:
-                    if notebookName not in localNoteDict:
-                        self.ec.delete_notebook(notebookName)
-                    else:
-                        if notebookName not in remoteNoteDict: # local 有 remote 没有
-                            self.ec.create_notebook(notebookName)
+        uploadDict = changesDict[UPLOAD]
+        for notebookName in uploadDict:
+            if notebookName not in localNoteDict: # local无 删了
+                self.ec.delete_notebook(notebookName)
+                self.objectStore.delete_object(self.es.get([notebookName]).guid)
+            else:
+                if notebookName not in remoteNoteDict: # local 有 remote 没有
+                    self.ec.create_notebook(notebookName)
+                else:
+                    for noteName in uploadDict[notebookName]:
+                        if noteName not in localNoteDict[notebookName].notes:
+                            self.objectStore.delete_object(self.es.get([notebookName, noteName]).guid)
+                            self.ec.delete_note([notebookName, noteName])
                         else:
-                            if noteName not in localNoteDict[notebookName]:
-                                self.ec.delete_note([notebookName, noteName])
-                            else:
-                                _upload_files([notebookName, noteName])
+                            print('Uploading ', '/'.join([notebookName, noteName]))
+                            filepath = os.path.join(notebookName, noteName)
+                            with open(filepath + ".md") as f:
+                                txt = f.read()
+                            self.ec.update_note([notebookName, noteName], txt)
 
-                    # if notebookName not in localNoteDict: # 本地不存在
-                    #     self.ec.delete_notebook(notebookName)
-                    #     for note in ens or []: self.ec.delete_note([notebookName, note])
-                    # else:
-                    #     self.ec.create_notebook(noteFullPath[0])
-                    #     for note in lns:
-                    #         attachmentDict = self.ls.read_note(noteFullPath + [note[0]])
-                    #         _upload_files(noteFullPath + [note[0]], attachmentDict)
         self.ls.update_config(lastUpdate=time.time() + 1)
         return True
 
