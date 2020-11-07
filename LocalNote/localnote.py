@@ -1,4 +1,5 @@
 import os
+import time
 import urllib
 import html
 import re
@@ -10,6 +11,28 @@ import argparse
 import logging
 
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - line:%(lineno)d - %(message)s")
+
+def chinese_count(s):
+    # 中文字符范围
+    ret = 0
+    for ch in s:
+        if '\u4e00' <= ch <= '\u9fff':
+            ret += 1
+    return ret
+
+def pad(s, length=30):
+    s= str(s)
+    ret = length - chinese_count(s) - len(s)
+    if ret > 0:
+        s += " " * ret
+    return s
+
+def timestamp2str(timestamp):
+    return time.strftime(
+        '%Y-%m-%d %H:%M:%S',
+        time.localtime(timestamp)
+    )
+
 
 def execute_cmd(cmd, **kwargs):
     completed_process = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, **kwargs)
@@ -43,12 +66,9 @@ class Client:
 
     def find_by_title(self, title):
         note_filter = NoteStore.NoteFilter()
-        note_filter.words = "intitle:{}".format(title)
+        note_filter.words = title
         notes = self.notestore.findNotes(note_filter, 0, 10).notes
-        for note in notes:
-            if note.title == title:
-                return note
-        return None
+        return notes
 
     def update_note(self, note, title, content):
         quoted_content = urllib.parse.quote(content)
@@ -69,7 +89,8 @@ def main():
     args = parser.parse_args()
 
     client = Client()
-    title, filetype = os.path.splitext(args.filename)
+    _, filetype = os.path.splitext(args.filename)
+    title = os.path.splitext(os.path.basename(args.filename))[0]
     if filetype == '.md':
         with open(args.filename) as f:
             content = f.read()
@@ -83,18 +104,29 @@ def main():
 
     if args.mode == 'add':
         client.create_note(title, content)
-        logging.info("create note: {} SUCCESS!".format(title))
+        print("create note: {} SUCCESS!".format(title))
     elif args.mode == 'update':
-        note = client.find_by_title(title)
-        if note:
-            answer = input("Do you want to update note: {}? [y/n]".format(node.title))
-            if answer == 'y':
+        notes = client.find_by_title(title)
+        if notes:
+            print("There are {} notes similar with {}, they are: ".format(len(notes), args.filename))
+            for i, note in enumerate(notes):
+                print("{no:<5}{title}created:{created}last updated:{updated}".format(
+                    no=str(i) + ".", 
+                    title=pad(note.title, 40),
+                    created=pad(timestamp2str(note.created)),
+                    updated=pad(timestamp2str(note.updated)))
+                )
+            answer = input("Choose one to udpate. Input 'n' to quit: ")
+            print("Input: {}".format(answer))
+            if answer.isdigit():
+                i = int(answer)
+                note = notes[i]
                 client.update_note(note, title, content)
-                logging.info("Note {} has been udpated! SUCCESS".format(note.title))
+                print("Note {} has been udpated! SUCCESS".format(note.title))
             else:
-                logging.info("Skip!")
+                print("Skip!")
         else:
-            logging.info("No similar note called {} was found!".format(title))
+            print("No similar note called {} was found!".format(title))
     else:
         raise Exception("Unsupported mode: {}".format(args.mode))
 
