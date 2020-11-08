@@ -73,7 +73,7 @@ class Client:
     def update_note(self, note, title, content):
         quoted_content = urllib.parse.quote(content)
         newnote = Types.Note()
-        newnote.title = title
+        newnote.title = title.strip()
         newnote.content = '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">'
         newnote.content += '<en-note><div>{}</div><center>{}</center></en-note>'.format(html.escape(content), quoted_content)
         newnote.guid = note.guid
@@ -116,13 +116,13 @@ def main():
                     created=pad(timestamp2str(note.created)),
                     updated=pad(timestamp2str(note.updated)))
                 )
-            answer = input("Choose one to udpate. Input 'n' to quit: ")
+            answer = input("Choose one to update. Input 'n' to quit: ")
             print("Input: {}".format(answer))
             if answer.isdigit():
                 i = int(answer)
                 note = notes[i]
                 client.update_note(note, title, content)
-                print("Note {} has been udpated! SUCCESS".format(note.title))
+                print("Note {} has been updated! SUCCESS".format(note.title))
             else:
                 print("Skip!")
         else:
