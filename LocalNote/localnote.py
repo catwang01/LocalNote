@@ -33,7 +33,6 @@ def timestamp2str(timestamp):
         time.localtime(timestamp)
     )
 
-
 def execute_cmd(cmd, **kwargs):
     completed_process = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, **kwargs)
     return completed_process.stdout.decode().strip()
@@ -122,7 +121,6 @@ def main():
                 i = int(answer)
                 note = notes[i]
                 client.update_note(note, title, content)
-                print("Note {} has been updated! SUCCESS".format(note.title))
             else:
                 print("Skip!")
         else:
