@@ -1,6 +1,8 @@
 import os
 import time
 import urllib
+import markdown
+from markdown.extensions.fenced_code import FencedCodeExtension
 import html
 import re
 import evernote.edam.type.ttypes as Types
@@ -26,6 +28,10 @@ def pad(s, length=30):
     if ret > 0:
         s += " " * ret
     return s
+
+def tohtml(mdtext):
+    return markdown.markdown(mdtext, extensions=[FencedCodeExtension()])
+
 
 def timestamp2str(timestamp):
     return time.strftime(
@@ -56,8 +62,9 @@ class Client:
         quoted_content = urllib.parse.quote(content)
         newnote = Types.Note()
         newnote.title = title
+        newnote.source = 'localnote'
         newnote.content = '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">'
-        newnote.content += '<en-note><div>{}</div><center>{}</center></en-note>'.format(html.escape(content), quoted_content)
+        newnote.content += '<en-note><div>{}</div><center>{}</center></en-note>'.format(tohtml(content), quoted_content)
         newnote.attributes = Types.NoteAttributes(contentClass='yinxiang.markdown')
         newnote = self.notestore.createNote(newnote)
         logging.debug("newnote's title: {} newnote's guid: {}".format(newnote.title, newnote.guid))
@@ -74,7 +81,8 @@ class Client:
         newnote = Types.Note()
         newnote.title = title.strip()
         newnote.content = '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">'
-        newnote.content += '<en-note><div>{}</div><center>{}</center></en-note>'.format(html.escape(content), quoted_content)
+        newnote.content += '<en-note><div>{}</div><center>{}</center></en-note>'.format(tohtml(content), quoted_content)
+        newnote.source = 'localnote'
         newnote.guid = note.guid
         newnote = self.notestore.updateNote(newnote)
         logging.debug("updated note's title: {} updated note's guid: {}".format(newnote.title, newnote.guid))
