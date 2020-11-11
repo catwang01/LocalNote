@@ -3,3 +3,4 @@ dist/*
 LocalNote.egg-info/*
 *.pyc
 *.swp
+.idea
