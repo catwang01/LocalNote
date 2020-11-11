@@ -1,6 +1,8 @@
 import os
 import time
 import urllib
+import markdown
+from markdown.extensions.fenced_code import FencedCodeExtension
 import html
 import re
 import evernote.edam.type.ttypes as Types
@@ -27,6 +29,10 @@ def pad(s, length=30):
         s += " " * ret
     return s
 
+def tohtml(mdtext):
+    return markdown.markdown(mdtext, extensions=[FencedCodeExtension()])
+
+
 def timestamp2str(timestamp):
     return time.strftime(
         '%Y-%m-%d %H:%M:%S',
@@ -52,16 +58,26 @@ class Client:
         self.client = EvernoteClient(token=developer_token, china=True ,sandbox=False)
         self.notestore = self.client.get_note_store()
 
-    def create_note(self, title, content):
-        quoted_content = urllib.parse.quote(content)
-        newnote = Types.Note()
-        newnote.title = title
-        newnote.content = '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">'
-        newnote.content += '<en-note><div>{}</div><center>{}</center></en-note>'.format(html.escape(content), quoted_content)
-        newnote.attributes = Types.NoteAttributes(contentClass='yinxiang.markdown')
-        newnote = self.notestore.createNote(newnote)
-        logging.debug("newnote's title: {} newnote's guid: {}".format(newnote.title, newnote.guid))
+    def make_markdown_content(self, content):
+        markdowncontent = urllib.parse.quote(content)
+        normalcontent = tohtml(content)
+        style = 'style=\"display: block; overflow-x: auto; background: #1e1e1e; line-height: 160%; box-sizing: content-box; border: 0; border-radius: 0; letter-spacing: -.3px; padding: 18px; color: #f4f4f4; white-space: pre-wrap;\"'
+        normalcontent = re.sub("class=\".*?\"", style, normalcontent)
+        ret = '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">'
+        ret += '<en-note><div>{normalcontent}</div><center>{markdowncontent}</center></en-note>'.format(normalcontent=normalcontent, markdowncontent=markdowncontent)
+        return ret
 
+    def get_note(self, content, title):
+        note = Types.Note()
+        note.title = title.strip()
+        note.content = self.make_markdown_content(content)
+        return note
+
+    def create_note(self, title, content):
+        note = self.get_note(content, title)
+        note.attributes = Types.NoteAttributes(contentClass='yinxiang.markdown', source='localnote')
+        note = self.notestore.createNote(note)
+        logging.debug("note's title: {} note's guid: {}".format(note.title, note.guid))
 
     def find_by_title(self, title):
         note_filter = NoteStore.NoteFilter()
@@ -70,16 +86,12 @@ class Client:
         return notes
 
     def update_note(self, note, title, content):
-        quoted_content = urllib.parse.quote(content)
-        newnote = Types.Note()
-        newnote.title = title.strip()
-        newnote.content = '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">'
-        newnote.content += '<en-note><div>{}</div><center>{}</center></en-note>'.format(html.escape(content), quoted_content)
+        newnote = self.get_note(content, title)
         newnote.guid = note.guid
+        newnote.attributes = Types.NoteAttributes(contentClass='yinxiang.markdown', source='localnote')
         newnote = self.notestore.updateNote(newnote)
         logging.debug("updated note's title: {} updated note's guid: {}".format(newnote.title, newnote.guid))
 
-        
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("mode", type=str)
@@ -91,7 +103,7 @@ def main():
     _, filetype = os.path.splitext(args.filename)
     title = os.path.splitext(os.path.basename(args.filename))[0]
     if filetype == '.md':
-        with open(args.filename) as f:
+        with open(args.filename, encoding='utf8') as f:
             content = f.read()
     elif filetype == '.ipynb':
         content = nbconvert(args.filename)

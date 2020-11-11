@@ -29,7 +29,7 @@ setup(
     # simple. Or you can use find_packages().
     packages=["LocalNote"],
 
-    install_requires=['evernote3', 'oauth2'],
+    install_requires=['evernote3', 'oauth2', 'markdown'],
 
     entry_points={
         'console_scripts': [
