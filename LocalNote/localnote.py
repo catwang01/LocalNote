@@ -3,6 +3,8 @@ import time
 import urllib
 import markdown
 from markdown.extensions.fenced_code import FencedCodeExtension
+# from markdown.extensions.toc import TocExtension
+from markdown.extensions.tables import TableExtension
 import html
 import re
 import evernote.edam.type.ttypes as Types
@@ -30,7 +32,7 @@ def pad(s, length=30):
     return s
 
 def tohtml(mdtext):
-    return markdown.markdown(mdtext, extensions=[FencedCodeExtension()])
+    return markdown.markdown(mdtext, extensions=[FencedCodeExtension(), TableExtension()])
 
 
 def timestamp2str(timestamp):
@@ -61,10 +63,10 @@ class Client:
     def make_markdown_content(self, content):
         markdowncontent = urllib.parse.quote(content)
         normalcontent = tohtml(content)
-        style = 'style=\"display: block; overflow-x: auto; background: #1e1e1e; line-height: 160%; box-sizing: content-box; border: 0; border-radius: 0; letter-spacing: -.3px; padding: 18px; color: #f4f4f4; white-space: pre-wrap;\"'
-        normalcontent = re.sub("class=\".*?\"", style, normalcontent)
+        style = '<code style=\"display: block; overflow-x: auto; background: #1e1e1e; line-height: 160%; box-sizing: content-box; border: 0; border-radius: 0; letter-spacing: -.3px; padding: 18px; color: #f4f4f4; white-space: pre-wrap;\">'
+        normalcontent = re.sub("<code.*?>", style, normalcontent)
         ret = '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">'
-        ret += '<en-note><div>{normalcontent}</div><center>{markdowncontent}</center></en-note>'.format(normalcontent=normalcontent, markdowncontent=markdowncontent)
+        ret += '<en-note><div>{normalcontent}</div><center style="display:none !important;visibility:collapse !important;height:0 !important;white-space:nowrap;width:100%;overflow:hidden">{markdowncontent}</center></en-note>'.format(normalcontent=normalcontent, markdowncontent=markdowncontent)
         return ret
 
     def get_note(self, content, title):
