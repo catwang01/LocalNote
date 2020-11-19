@@ -7,6 +7,7 @@ from markdown.extensions.fenced_code import FencedCodeExtension
 from markdown.extensions.tables import TableExtension
 import html
 import re
+from lxml import etree
 import evernote.edam.type.ttypes as Types
 from evernote.edam.notestore import NoteStore
 from evernote.api.client import EvernoteClient
@@ -41,6 +42,34 @@ def timestamp2str(timestamp):
         time.localtime(timestamp)
     )
 
+
+def create_toc_for_html(content):
+    html = etree.HTML(content)
+    # html.xpath("//h1/text() | //h2/text() | //h3/text() | //h4/text() | //h5/text() | //h6/text()")
+    titles = html.xpath("//h1 | //h2 | //h3 | //h4 | //h5 | //h6")
+
+    n = len(titles)
+    lis = [etree.Element("li") for i in range(len(titles))]
+    for i in range(len(titles)):
+        a = etree.Element("a")
+        a.text = titles[i].text
+        a.attrib['style'] = "line-height: 160%; box-sizing: content-box; text-decoration: underline; color: #5286bc;"
+        lis[i].append(a)
+    lis.append(etree.Element("ul"))
+
+    st = [-1]
+    for i in range(n + 1):
+        while len(st) > 1 and (i == n or titles[st[-1]].tag >= titles[i].tag):
+            idx = st.pop()
+            if lis[st[-1]].tag != 'ul':
+                ul = etree.Element("ul")
+                ul.append(lis[st[-1]])
+                lis[st[-1]] = ul
+            lis[st[-1]].append(lis[idx])
+        if i < len(titles): st.append(i)
+
+    return etree.tostring(lis[st[0]]).decode()
+
 def execute_cmd(cmd, **kwargs):
     completed_process = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, **kwargs)
     return completed_process.stdout.decode().strip()
@@ -55,19 +84,26 @@ def nbconvert(filename):
 
 class Client:
     def __init__(self):
-        developer_token = 'S=s54:U=157132c:E=175bc7ccef9:C=17598704928:P=1cd:A=en-devtoken:V=2:H=9695fda68b52d26fa24b2956f2924bb9'
+        developer_token = 'S=s54:U=157132c:E=175e54d4e7f:C=175c140c990:P=1cd:A=en-devtoken:V=2:H=04eabce984f6e12b0eaa6b76854be336'
         # Set up the NoteStore client
         self.client = EvernoteClient(token=developer_token, china=True ,sandbox=False)
         self.notestore = self.client.get_note_store()
 
     def make_markdown_content(self, content):
+        content = re.sub(r"```(.*?)\n", "```\n", content)
         markdowncontent = urllib.parse.quote(content)
         normalcontent = tohtml(content)
         style = '<code style=\"display: block; overflow-x: auto; background: #1e1e1e; line-height: 160%; box-sizing: content-box; border: 0; border-radius: 0; letter-spacing: -.3px; padding: 18px; color: #f4f4f4; white-space: pre-wrap;\">'
         normalcontent = re.sub("<code.*?>", style, normalcontent)
+        toc = create_toc_for_html(normalcontent)
+        normalcontent = toc + normalcontent
         ret = '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">'
         ret += '<en-note><div>{normalcontent}</div><center style="display:none !important;visibility:collapse !important;height:0 !important;white-space:nowrap;width:100%;overflow:hidden">{markdowncontent}</center></en-note>'.format(normalcontent=normalcontent, markdowncontent=markdowncontent)
         return ret
+
+    def get_note_detail(self, guid):
+        fullnote = self.notestore.getNote(guid, True, True, True, True)
+        return fullnote
 
     def get_note(self, content, title):
         note = Types.Note()
