@@ -1,9 +1,10 @@
 import os
+import json
 import time
 import urllib
 import markdown
 from markdown.extensions.fenced_code import FencedCodeExtension
-# from markdown.extensions.toc import TocExtension
+from markdown.extensions.toc import TocExtension
 from markdown.extensions.tables import TableExtension
 import html
 import re
@@ -11,6 +12,7 @@ from lxml import etree
 import evernote.edam.type.ttypes as Types
 from evernote.edam.notestore import NoteStore
 from evernote.api.client import EvernoteClient
+from evernote.edam.error.ttypes import EDAMUserException
 import subprocess
 import argparse   
 import logging
@@ -55,6 +57,7 @@ def create_toc_for_html(content):
         a.text = titles[i].text
         a.attrib['style'] = "line-height: 160%; box-sizing: content-box; text-decoration: underline; color: #5286bc;"
         lis[i].append(a)
+    # 添加一个 ul 元素。 st[-1] 会取到这个元素
     lis.append(etree.Element("ul"))
 
     st = [-1]
@@ -68,7 +71,12 @@ def create_toc_for_html(content):
             lis[st[-1]].append(lis[idx])
         if i < len(titles): st.append(i)
 
-    return etree.tostring(lis[st[0]]).decode()
+    div = etree.Element("div")
+    if len(lis[-1].getchildren()) == 1:
+        div.append(lis[-1].getchildren()[0])
+    else:
+        div.append(lis[-1])
+    return etree.tostring(div).decode()
 
 def execute_cmd(cmd, **kwargs):
     completed_process = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, **kwargs)
@@ -82,15 +90,50 @@ def nbconvert(filename):
     content = execute_cmd(cmd)
     return content
 
+
+class Config:
+
+    def __init__(self, path):
+        self.path = path
+        if os.path.exists(self.path):
+            with open(self.path, encoding='utf8') as f:
+                self.config = json.load(f)
+        else:
+            self.config = {}
+
+    def get(self, key):
+        return self.config.get(key, None)
+
+    def add(self, key, val):
+        self.config[key] = val
+        with open(self.path, 'w', encoding='utf8') as f:
+            json.dump(self.config, f)
+
+
 class Client:
     def __init__(self):
-        developer_token = 'S=s54:U=157132c:E=175e54d4e7f:C=175c140c990:P=1cd:A=en-devtoken:V=2:H=04eabce984f6e12b0eaa6b76854be336'
-        # Set up the NoteStore client
-        self.client = EvernoteClient(token=developer_token, china=True ,sandbox=False)
+        config = Config("config.json")
+        developer_token = config.get('developer_token')
+
+        while True:
+            # Set up the NoteStore client
+            if developer_token is None:
+                print("You don't have a develop token! Please ask at https://app.yinxiang.com/api/DeveloperToken.action")
+                developer_token = input("Input your token: ")
+            try:
+                self.client = EvernoteClient(token=developer_token, china=True ,sandbox=False)
+            except EDAMUserException as e:
+                print("Your develop token has been expired! Please ask at https://app.yinxiang.com/api/DeveloperToken.action")
+                developer_token = input("Input your new token: ")
+            else:
+                break
+        config.add('developer_token', developer_token)
         self.notestore = self.client.get_note_store()
+
 
     def make_markdown_content(self, content):
         content = re.sub(r"```(.*?)\n", "```\n", content)
+        content = re.sub(r'\[toc\]', "", content)
         markdowncontent = urllib.parse.quote(content)
         normalcontent = tohtml(content)
         style = '<code style=\"display: block; overflow-x: auto; background: #1e1e1e; line-height: 160%; box-sizing: content-box; border: 0; border-radius: 0; letter-spacing: -.3px; padding: 18px; color: #f4f4f4; white-space: pre-wrap;\">'
