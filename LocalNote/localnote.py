@@ -6,6 +6,7 @@ import markdown
 from markdown.extensions.fenced_code import FencedCodeExtension
 from markdown.extensions.toc import TocExtension
 from markdown.extensions.tables import TableExtension
+# from markdown.extensions.
 import html
 import re
 from lxml import etree
@@ -19,11 +20,14 @@ import logging
 
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - line:%(lineno)d - %(message)s")
 
+def ischinese(ch):
+    return '\u4e00' <= ch <= '\u9fff'
+
 def chinese_count(s):
     # 中文字符范围
     ret = 0
     for ch in s:
-        if '\u4e00' <= ch <= '\u9fff':
+        if ischinese(ch):
             ret += 1
     return ret
 
@@ -122,20 +126,33 @@ class Client:
                 developer_token = input("Input your token: ")
             try:
                 self.client = EvernoteClient(token=developer_token, china=True ,sandbox=False)
+                self.notestore = self.client.get_note_store()
             except EDAMUserException as e:
                 print("Your develop token has been expired! Please ask at https://app.yinxiang.com/api/DeveloperToken.action")
                 developer_token = input("Input your new token: ")
             else:
                 break
         config.add('developer_token', developer_token)
-        self.notestore = self.client.get_note_store()
 
 
     def make_markdown_content(self, content):
         content = re.sub(r"```(.*?)\n", "```\n", content)
         content = re.sub(r'\[toc\]', "", content)
+
+
+        def add_text_tag(matched):
+
+            def add_text(matched):
+                s = matched.group(0)
+                return r'\text{{{}}}'.format(s)
+
+            latex_content = matched.group(1)
+            return "$${}$$".format(re.sub(r"[\u4e00-\u9fff]{1,}", add_text, latex_content))
+
+        pattern = re.compile("\$\$(.*?)\$\$", re.DOTALL)
+        content = re.sub(pattern, add_text_tag, content)
         markdowncontent = urllib.parse.quote(content)
-        normalcontent = tohtml(content)
+        normalcontent = tohtml(markdowncontent)
         style = '<code style=\"display: block; overflow-x: auto; background: #1e1e1e; line-height: 160%; box-sizing: content-box; border: 0; border-radius: 0; letter-spacing: -.3px; padding: 18px; color: #f4f4f4; white-space: pre-wrap;\">'
         normalcontent = re.sub("<code.*?>", style, normalcontent)
         toc = create_toc_for_html(normalcontent)
