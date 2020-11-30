@@ -41,7 +41,6 @@ def pad(s, length=30):
 def tohtml(mdtext):
     return markdown.markdown(mdtext, extensions=[FencedCodeExtension(), TableExtension()])
 
-
 def timestamp2str(timestamp):
     return time.strftime(
         '%Y-%m-%d %H:%M:%S',
@@ -136,9 +135,6 @@ class Client:
 
 
     def make_markdown_content(self, content):
-        content = re.sub(r"```(.*?)\n", "```\n", content)
-        content = re.sub(r'\[toc\]', "", content)
-
 
         def add_text_tag(matched):
 
@@ -152,7 +148,11 @@ class Client:
         pattern = re.compile("\$\$(.*?)\$\$", re.DOTALL)
         content = re.sub(pattern, add_text_tag, content)
         markdowncontent = urllib.parse.quote(content)
-        normalcontent = tohtml(markdowncontent)
+
+        content = re.sub(r"```(.*?)\n", "```\n", content)
+        content = re.sub(r'\[toc\]', "", content)
+
+        normalcontent = tohtml(content)
         style = '<code style=\"display: block; overflow-x: auto; background: #1e1e1e; line-height: 160%; box-sizing: content-box; border: 0; border-radius: 0; letter-spacing: -.3px; padding: 18px; color: #f4f4f4; white-space: pre-wrap;\">'
         normalcontent = re.sub("<code.*?>", style, normalcontent)
         toc = create_toc_for_html(normalcontent)
