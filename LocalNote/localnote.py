@@ -6,7 +6,6 @@ import markdown
 from markdown.extensions.fenced_code import FencedCodeExtension
 from markdown.extensions.toc import TocExtension
 from markdown.extensions.tables import TableExtension
-# from markdown.extensions.
 import html
 import re
 from lxml import etree
@@ -19,6 +18,14 @@ import argparse
 import logging
 
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - line:%(lineno)d - %(message)s")
+
+DISPLAY_TABLE = {
+    "code": "background-color: #F0F0F0; border-radius: 4px; padding-top: 0.5em; padding-right: 0.5em; padding-bottom: 0.5em; padding-left: 0.5em; margin-top: 0; margin-right: .225em; margin-bottom: 0; margin-left: .225em; color: #444; border: 0; font-size: .9em; overflow: visible !important; display: block; overflow-x: auto; background: #F0F0F0;",
+    "div > ul > ul": "padding-top: 0; padding-right: 0; padding-bottom: 0; padding-left: 0; margin-top: 1.1em; margin-right: 0; margin-bottom: 1.1em; margin-left: 3em; list-style-type: none;",
+    "a": "color: #0088cc; text-decoration: none;",
+    "div > ul": "padding-top: 0; padding-right: 0; padding-bottom: 0; padding-left: 0; margin-top: 1.1em; margin-right: 0; margin-bottom: 1.1em; margin-left: 3em; list-style-type: none;",
+    "pre": "background-color: #F0F0F0; border-radius: 4px; padding-top: 0.5em; padding-right: 0.5em; padding-bottom: 0.5em; padding-left: 0.5em; margin-top: 0; margin-right: .225em; margin-bottom: 0; margin-left: .225em; color: #444; border: 0; font-size: .9em; overflow: visible !important; display: block; overflow-x: auto; background: #F0F0F0;",
+}
 
 def ischinese(ch):
     return '\u4e00' <= ch <= '\u9fff'
@@ -39,7 +46,7 @@ def pad(s, length=30):
     return s
 
 def tohtml(mdtext):
-    return markdown.markdown(mdtext, extensions=[FencedCodeExtension(), TableExtension()])
+    return markdown.markdown(mdtext, extensions=[FencedCodeExtension(), TableExtension(), TocExtension()])
 
 def timestamp2str(timestamp):
     return time.strftime(
@@ -48,38 +55,38 @@ def timestamp2str(timestamp):
     )
 
 
-def create_toc_for_html(content):
-    html = etree.HTML(content)
-    # html.xpath("//h1/text() | //h2/text() | //h3/text() | //h4/text() | //h5/text() | //h6/text()")
-    titles = html.xpath("//h1 | //h2 | //h3 | //h4 | //h5 | //h6")
+# def create_toc_for_html(content):
+#     html = etree.HTML(content)
+#     # html.xpath("//h1/text() | //h2/text() | //h3/text() | //h4/text() | //h5/text() | //h6/text()")
+#     titles = html.xpath("//h1 | //h2 | //h3 | //h4 | //h5 | //h6")
 
-    n = len(titles)
-    lis = [etree.Element("li") for i in range(len(titles))]
-    for i in range(len(titles)):
-        a = etree.Element("a")
-        a.text = titles[i].text
-        a.attrib['style'] = "line-height: 160%; box-sizing: content-box; text-decoration: underline; color: #5286bc;"
-        lis[i].append(a)
-    # 添加一个 ul 元素。 st[-1] 会取到这个元素
-    lis.append(etree.Element("ul"))
+#     n = len(titles)
+#     lis = [etree.Element("li") for i in range(len(titles))]
+#     for i in range(len(titles)):
+#         a = etree.Element("a")
+#         a.text = titles[i].text
+#         a.attrib['style'] = "line-height: 160%; box-sizing: content-box; text-decoration: underline; color: #5286bc;"
+#         lis[i].append(a)
+#     # 添加一个 ul 元素。 st[-1] 会取到这个元素
+#     lis.append(etree.Element("ul"))
 
-    st = [-1]
-    for i in range(n + 1):
-        while len(st) > 1 and (i == n or titles[st[-1]].tag >= titles[i].tag):
-            idx = st.pop()
-            if lis[st[-1]].tag != 'ul':
-                ul = etree.Element("ul")
-                ul.append(lis[st[-1]])
-                lis[st[-1]] = ul
-            lis[st[-1]].append(lis[idx])
-        if i < len(titles): st.append(i)
+#     st = [-1]
+#     for i in range(n + 1):
+#         while len(st) > 1 and (i == n or titles[st[-1]].tag >= titles[i].tag):
+#             idx = st.pop()
+#             if lis[st[-1]].tag != 'ul':
+#                 ul = etree.Element("ul")
+#                 ul.append(lis[st[-1]])
+#                 lis[st[-1]] = ul
+#             lis[st[-1]].append(lis[idx])
+#         if i < len(titles): st.append(i)
 
-    div = etree.Element("div")
-    if len(lis[-1].getchildren()) == 1:
-        div.append(lis[-1].getchildren()[0])
-    else:
-        div.append(lis[-1])
-    return etree.tostring(div).decode()
+#     div = etree.Element("div")
+#     if len(lis[-1].getchildren()) == 1:
+#         div.append(lis[-1].getchildren()[0])
+#     else:
+#         div.append(lis[-1])
+#     return etree.tostring(div).decode()
 
 def execute_cmd(cmd, **kwargs):
     completed_process = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, **kwargs)
@@ -89,7 +96,7 @@ def strip_control_characters(s):
     return re.sub(r"[\x00-\x08\x0b-\x0c\x0e-\x1F\x7F]", "", s) 
 
 def nbconvert(filename):
-    cmd = 'jupyter nbconvert --to markdown --stdout "{}"'.format(filename)
+    cmd = 'jupyter nbconvert "{}" --to markdown --stdout'.format(filename)
     content = execute_cmd(cmd)
     return content
 
@@ -134,6 +141,30 @@ class Client:
         config.add('developer_token', developer_token)
 
 
+    def evernote_decoreate(self, htmlcontent):
+        htmlcontent = "<div style='max-width: 100%;'><p style=\"margin-top: 1.1em; margin-right: 0; margin-bottom: 1.6em; margin-left: 0;\"></p>{}</div>".format(htmlcontent)
+        html = etree.HTML(htmlcontent)
+
+        toc = html.cssselect('div .toc')
+        if toc != []:        
+            toc = toc[0]
+            for elem in toc.cssselect("*"):
+                if elem.text is not None:
+                    elem.text = elem.text.strip()
+
+        for elem in html.cssselect('*'):
+            if 'class' in elem.attrib:
+                del elem.attrib['class']
+            if 'id' in elem.attrib:
+                del elem.attrib['id']
+
+        for tag, style in DISPLAY_TABLE.items():
+            for elem in html.cssselect(tag):
+                elem.attrib['style'] = style
+        
+        div = html.cssselect('html > body > div')[0]
+        return etree.tostring(div).decode()
+
     def make_markdown_content(self, content):
 
         def add_text_tag(matched):
@@ -149,16 +180,14 @@ class Client:
         content = re.sub(pattern, add_text_tag, content)
         markdowncontent = urllib.parse.quote(content)
 
-        content = re.sub(r"```(.*?)\n", "```\n", content)
-        content = re.sub(r'\[toc\]', "", content)
+        # content = re.sub(r"```(.*?)\n", "```\n", content)
+        content = re.sub(r'\[toc\]', "[TOC]", content)
 
         normalcontent = tohtml(content)
-        style = '<code style=\"display: block; overflow-x: auto; background: #1e1e1e; line-height: 160%; box-sizing: content-box; border: 0; border-radius: 0; letter-spacing: -.3px; padding: 18px; color: #f4f4f4; white-space: pre-wrap;\">'
-        normalcontent = re.sub("<code.*?>", style, normalcontent)
-        toc = create_toc_for_html(normalcontent)
-        normalcontent = toc + normalcontent
+        normalcontent = self.evernote_decoreate(normalcontent)
         ret = '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">'
-        ret += '<en-note><div>{normalcontent}</div><center style="display:none !important;visibility:collapse !important;height:0 !important;white-space:nowrap;width:100%;overflow:hidden">{markdowncontent}</center></en-note>'.format(normalcontent=normalcontent, markdowncontent=markdowncontent)
+        # ret += '<en-note><div>{normalcontent}</div><center style="display:none !important;visibility:collapse !important;height:0 !important;white-space:nowrap;width:100%;overflow:hidden">{markdowncontent}</center></en-note>'.format(normalcontent=normalcontent, markdowncontent=markdowncontent)
+        ret += '<en-note>{normalcontent}</en-note>'.format(normalcontent=normalcontent, markdowncontent=markdowncontent)
         return ret
 
     def get_note_detail(self, guid):
@@ -174,8 +203,9 @@ class Client:
     def create_note(self, title, content):
         note = self.get_note(content, title)
         note.attributes = Types.NoteAttributes(contentClass='yinxiang.markdown', source='localnote')
-        note = self.notestore.createNote(note)
+        note.attributes = Types.NoteAttributes(source='localnote')
         logging.debug("note's title: {} note's guid: {}".format(note.title, note.guid))
+        note = self.notestore.createNote(note)
 
     def find_by_title(self, title):
         note_filter = NoteStore.NoteFilter()
@@ -187,6 +217,7 @@ class Client:
         newnote = self.get_note(content, title)
         newnote.guid = note.guid
         newnote.attributes = Types.NoteAttributes(contentClass='yinxiang.markdown', source='localnote')
+        newnote.attributes = Types.NoteAttributes(source='localnote')
         newnote = self.notestore.updateNote(newnote)
         logging.debug("updated note's title: {} updated note's guid: {}".format(newnote.title, newnote.guid))
 
